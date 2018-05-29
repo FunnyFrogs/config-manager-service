@@ -68,6 +68,32 @@ MongoClient.connect(mongoUri, function (err, db) {
         });
     });
 
+    app.get('/listconfigsbyName/:serviceName', function (req, res) {
+        var serviceName = req.params.serviceName;
+        db.collection('configs').find({
+            'name': serviceName
+        }).toArray(function (err, docs) {
+            res.json({
+                'configs': docs
+            });
+        });
+    });
+
+    app.get('/configByIdIp/:serviceName/:clientId/:ipaddress', function (req, res) {
+        var serviceName = req.params.serviceName;
+        var clientId = req.params.clientId;
+        var ipaddress = req.params.ipaddress;
+        db.collection('configs').find({
+            'name': serviceName,
+            'clientId': clientId,
+            'ipaddress': ipaddress
+        }).toArray(function (err, docs) {
+            res.json({
+                'configs': docs
+            });
+        });
+    });
+
     app.post('/createconfig', function (req, res) {
         var servicename = req.body.servicename;
         var configname = req.body.configname;
