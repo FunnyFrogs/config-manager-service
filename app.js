@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 MongoClient.connect(mongoUri, function (err, db) {
     assert.equal(null, err);
     console.log('Successfully connected to mondodb');
-    app.get('/listservices', function (req, res) {
+    app.get('/config/listservices', function (req, res) {
         db.collection('services').find({}).toArray(function (err, docs) {
             res.json({
                 'services': docs
@@ -32,7 +32,7 @@ MongoClient.connect(mongoUri, function (err, db) {
         });
     });
 
-    app.post('/createservice', function (req, res) {
+    app.post('/config/createservice', function (req, res) {
         var servicename = req.body.servicename;
         var id = uuidv1();
         db.collection('services').insertOne({
@@ -47,7 +47,7 @@ MongoClient.connect(mongoUri, function (err, db) {
 
     });
 
-    app.delete('/deleteservice/:service_id', function (req, res) {
+    app.delete('/config/deleteservice/:service_id', function (req, res) {
         var serviceId = req.params.service_id;
         db.collection('services').deleteMany({
             id: serviceId,
@@ -60,7 +60,7 @@ MongoClient.connect(mongoUri, function (err, db) {
 
     });
 
-    app.get('/listconfigs', function (req, res) {
+    app.get('/config/listconfigs', function (req, res) {
         db.collection('configs').find({}).toArray(function (err, docs) {
             res.json({
                 'configs': docs
@@ -68,7 +68,7 @@ MongoClient.connect(mongoUri, function (err, db) {
         });
     });
 
-    app.get('/listconfigsbyName/:serviceName', function (req, res) {
+    app.get('/config/listconfigsbyName/:serviceName', function (req, res) {
         var serviceName = req.params.serviceName;
         db.collection('configs').find({
             'name': serviceName
@@ -79,7 +79,43 @@ MongoClient.connect(mongoUri, function (err, db) {
         });
     });
 
-    app.get('/configByIdIp/:serviceName/:clientId/:ipaddress', function (req, res) {
+    app.get('/config/listconfigsbyClient/:serviceName/:clientName', function (req, res) {
+        var serviceName = req.params.serviceName;
+        var clientName = req.params.clientName;
+        var clientList = [];
+        db.collection('configs').find({
+            'name': serviceName,
+            'clientId': clientName
+        }).toArray(function (err, docs) {
+            clientList = docs;
+            db.collection('configs').find({
+                'name': serviceName,
+                "clientId": {
+                    $ne: clientName,
+                    $eq: 'All'
+                }
+            }).toArray(function (err, docs) {
+                var result = JSON.parse(JSON.stringify(docs));
+                for (var i = 0; i < clientList.length; i++) {
+                    result = docs.filter((val) => {
+                        return val.key !== clientList[i].key
+                    });
+                    docs = JSON.parse(JSON.stringify(result));
+                }
+                if (result) {
+                    var finalResult = result.concat(clientList);
+                } else {
+                    var finalResult = clientList;
+                }
+
+                res.json({
+                    'configs': finalResult
+                });
+            });
+        });
+    });
+
+    app.get('/config/configByIdIp/:serviceName/:clientId/:ipaddress', function (req, res) {
         var serviceName = req.params.serviceName;
         var clientId = req.params.clientId;
         var ipaddress = req.params.ipaddress;
@@ -94,7 +130,7 @@ MongoClient.connect(mongoUri, function (err, db) {
         });
     });
 
-    app.post('/createconfig', function (req, res) {
+    app.post('/config/createconfig', function (req, res) {
         var servicename = req.body.servicename;
         var configname = req.body.configname;
         var clientId = req.body.clientId;
@@ -119,10 +155,32 @@ MongoClient.connect(mongoUri, function (err, db) {
 
     });
 
-    app.delete('/deleteconfig/:config_id', function (req, res) {
-        var serviceId = req.params.service_id;
+    app.put('/config/updateconfig', function (req, res) {
+        const query = {
+            id: req.body.id
+        }
+        const newValue = {
+            $set: {
+                configname: req.body.configname,
+                clientId: req.body.clientId,
+                ipaddress: req.body.ipaddress,
+                key: req.body.key,
+                value: req.body.value
+            }
+        }
+        db.collection('configs').updateMany(query, newValue, function (err, doc) {
+            assert.equal(null, err);
+            res.json({
+                message: 'updated config'
+            });
+        });
+
+    });
+
+    app.delete('/config/deleteconfig/:config_id', function (req, res) {
+        var configId = req.params.config_id;
         db.collection('configs').deleteMany({
-            id: serviceId,
+            id: configId,
         }, function (err, doc) {
             assert.equal(null, err);
             res.json({
