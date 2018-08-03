@@ -32,6 +32,30 @@ MongoClient.connect(mongoUri, function (err, db) {
         });
     });
 
+    app.post('/config/dataCollector/:schemaName', function (req, res) {
+        var inputData = req.body.inputData;
+        inputData['id'] = req.params.schemaName;
+        inputData['name'] = req.params.schemaName;
+        db.collection('services').insertOne(inputData, function (err, doc) {
+            assert.equal(null, err);
+            res.json({
+                message: 'create service'
+            });
+        });
+
+    });
+
+    app.get('/config/dataCollector/:schemaName', function (req, res) {
+        var schemaName = req.params.schemaName;
+        db.collection('services').find({
+            'name': schemaName
+        }).toArray(function (err, docs) {
+            res.json({
+                'list': docs
+            });
+        });
+    });
+
     app.post('/config/createservice', function (req, res) {
         var servicename = req.body.servicename;
         var id = uuidv1();
